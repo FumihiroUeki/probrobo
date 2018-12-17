@@ -43,7 +43,7 @@ class World:
         ax.set_xlim(-5, 5)
         # y軸の表示範囲
         ax.set_ylim(-5, 5)
-        ax.set_title("${Rrobot-Simulator}$", fontsize = 10)
+        ax.set_title("${Robot-Simulator}$", fontsize = 10)
         ax.set_xlabel("X", fontsize = 20)
         ax.set_ylabel("Y", fontsize = 20)
 
