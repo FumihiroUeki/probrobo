@@ -8,18 +8,6 @@ from scipy.stats import multivariate_normal
 from matplotlib.patches import Ellipse
 
 
-# 3シグマ範囲の楕円をして返す
-def three_sigma_ellipse(p, cov):
-    # 共分散行列の固有値と固有ベクトルを計算
-    eig_vals, eig_vec = np.linalg.eig(cov)
-
-    # ベクトルの間の角度を計算(ラジアン)
-    ang = math.atan2(eig_vec[:, 0][1], eig_vec[:, 0][0]) / math.pi * 180
-
-    # matplotで楕円を描くオブジェクトを返す
-    return Ellipse(p, width = 3 * eig_vals[0], height = 3 * eig_vals[1], angle = ang, fill = False, color = "blue", alpha = 0.5)
-
-
 class KalmanFilter:
 
 
@@ -33,6 +21,7 @@ class KalmanFilter:
         # cov : 共分散行列 [[0.1, 0.0, 0.0], [0.0, 0.2, 0.0], [0.0, 0.0, 0.01]]
         self.belief = multivariate_normal(mean = init_pose, cov = np.diag([1e-10, 1e-10, 1e-10]))
         
+        # 地図の受け渡し
         self.map = envmap
         self.distance_dev_rate = distance_dev_rate
         self.direction_dev = direction_dev
@@ -46,13 +35,17 @@ class KalmanFilter:
             obs_id = d[1]
 
             # Hの計算
+            # 点ランドマークの姿勢(x, y)を取得
             mx, my = self.map.landmarks[obs_id].pos
+            # ガウス分布の平均値(x, y, theta)を取得
             mux, muy, mut = self.belief.mean
+            # 2乗和の計算
             q = (mux - mx) ** 2 + (muy - my) ** 2
             sqrtq = np.sqrt(q)
             H = np.array([[(mux - mx) / sqrtq, (muy - my) / sqrtq, 0.0], [(my - muy) / q, (mux - mx) / q, -1.0]])
             
             # Qの計算
+            # ロボットから見た点ランドマークの距離と方向を取得
             hmu = IdealCamera.relative_polar_pos(self.belief.mean, self.map.landmarks[obs_id].pos)
             distance_dev = self.distance_dev_rate * hmu[0]
             Q = np.diag(np.array([distance_dev ** 2, self.direction_dev ** 2]))
@@ -122,10 +115,12 @@ class KfAgent(Agent):
         self.prev_omega = 0.0
 
 
+    # 図の描画
     def draw(self, ax, elems):
         self.kf.draw(ax, elems)
 
 
+    # return : 速度と角速度
     def decision(self, observation = None):
         self.kf.motion_update(self.prev_nu, self.prev_omega, self.time_interval)
         self.prev_nu, self.prev_omega = self.nu, self.omega
@@ -134,27 +129,38 @@ class KfAgent(Agent):
 
 
 if __name__ == "__main__":
-
+    
+    # 制御の周期
     time_interval = 0.1
+
+    # 世界座標系の作成
+    # 30秒間シミュレーション
     world = World(30, time_interval)
 
 
+    # 地図の作成
     m = Map()
+
+    # 地図に点ランドマークを追加
     m.append_landmark(Landmark(-4, 2))
     m.append_landmark(Landmark(2, -3))
     m.append_landmark(Landmark(3, 3))
     world.append(m)
 
+    # robot1を作成
     circling = KfAgent(time_interval, 0.2, 10.0 / 180.0 * math.pi, np.array([0, 0, 0]).T, m)
     r = Robot(np.array([0, 0, 0]).T, sensor = Camera(m), agent = circling, color = "red")
     world.append(r)
 
+    # robot2を作成
     linear = KfAgent(time_interval, 0.1, 0.0, np.array([0, 0, 0]).T, m)
     r = Robot(np.array([0, 0, 0]).T, sensor = Camera(m), agent = linear, color = "red")
     world.append(r)
 
+    # robot3を作成
     right = KfAgent(time_interval, 0.1, -3.0 / 180 * math.pi, np.array([0, 0, 0]).T, m)
     r = Robot(np.array([0, 0, 0]).T, sensor = Camera(m), agent = right, color = "red")
     world.append(r)
 
+    # 図を描画
     world.draw()
