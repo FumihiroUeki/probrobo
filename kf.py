@@ -8,6 +8,7 @@ from scipy.stats import multivariate_normal
 from matplotlib.patches import Ellipse
 
 
+# カルマンフィルタの実装
 class KalmanFilter:
 
 
@@ -16,9 +17,9 @@ class KalmanFilter:
     # motion_noise_stds : 動きに加えるノイズの標準偏差
     def __init__(self, envmap, init_pose, motion_noise_stds, distance_dev_rate = 0.14, direction_dev = 0.05):
 
-        # 多次元のガウス分布の生成
+        # 多次元のガウス分布の生成(この場合は3次元)
         # mean : 平均値 : [0.0, 0.0, math.pi / 4]
-        # cov : 共分散行列 [[0.1, 0.0, 0.0], [0.0, 0.2, 0.0], [0.0, 0.0, 0.01]]
+        # cov : 共分散行列 [[0.1, 0.0, 0.0], [0.0, 0.1, 0.0], [0.0, 0.0, 0.1]]
         self.belief = multivariate_normal(mean = init_pose, cov = np.diag([1e-10, 1e-10, 1e-10]))
         
         # 地図の受け渡し
@@ -32,6 +33,7 @@ class KalmanFilter:
 
         for d in observation:
             z = d[0]
+            # ランドマークのID
             obs_id = d[1]
 
             # Hの計算
@@ -111,6 +113,7 @@ class KfAgent(Agent):
         self.kf = KalmanFilter(envmap, init_pose, motion_noise_stds)
         self.time_interval = time_interval
 
+        # 前フレームの時間の速度と角速度
         self.prev_nu = 0.0
         self.prev_omega = 0.0
 
